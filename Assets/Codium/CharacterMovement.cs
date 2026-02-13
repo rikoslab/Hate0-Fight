@@ -15,9 +15,17 @@ public class CharacterMovement : MonoBehaviour
     public float force = 20f;
     public float speed = 4f;
     public float gravity = -6.66f;
+
     public float acceleration = 3f;
     public float decceleration = 9f;
+
+    public float airacceleraion = 2f;
+    public float airdecceleration = 3f;
+
     public float range = 0.5f;
+    public int maxJumps = 2;
+    private int remainingJumps;
+
     [Header ("BoOoleans")]
     private Vector2 sudinputs;
     public LayerMask mask = 4;
@@ -29,6 +37,7 @@ public class CharacterMovement : MonoBehaviour
     [SerializeField] private Vector3 direction; // suddenly its a 2d game
     [SerializeField] private Vector3 velocity;
     [SerializeField] private Vector3 vertical;
+    private Vector3 wallNormal;
 
     public void Start()
     {
@@ -36,14 +45,15 @@ public class CharacterMovement : MonoBehaviour
         playerInput = GetComponent<PlayerInput>();
         action_move = playerInput.actions["Move"];
         action_jump = playerInput.actions["Jump"];
+        remainingJumps = maxJumps;
     }
-
     void Gravity()
     {
         isGrounded = controller.isGrounded;
         if (controller.isGrounded)
         {
             vertical.y = -2f;
+            remainingJumps = maxJumps;
         } else { vertical.y += gravity * Time.deltaTime; }
     }
     void CheckDirection() 
@@ -53,11 +63,13 @@ public class CharacterMovement : MonoBehaviour
     }
     void Move()
     {
+        float currentAcceleration = isJumped ? airacceleraion : acceleration;
+        float currentDecceleration = isJumped ? airdecceleration : airacceleraion; 
         if (direction != Vector3.zero)
         {
-            velocity = Vector3.SmoothDamp(velocity, direction, ref direction, acceleration * Time.deltaTime, speed);
+            velocity = Vector3.SmoothDamp(velocity, direction, ref direction, currentAcceleration * Time.deltaTime, speed);
         }
-        else { velocity = Vector3.Lerp(velocity, Vector3.zero, decceleration * Time.deltaTime); }
+        else { velocity = Vector3.Lerp(velocity, Vector3.zero, currentDecceleration * Time.deltaTime); }
     }
     void CheckWalls()
     {
@@ -71,7 +83,21 @@ public class CharacterMovement : MonoBehaviour
     }
     void WallHandler()
     {
-        velocity.x = 0f;
+        velocity.y = 0;
+        if (sudinputs.magnitude > 0.1f)
+        {
+            // ѕроецируем направление движени€ на плоскость стены
+            Vector3 wallDirection = Vector3.ProjectOnPlane(sudinputs, wallNormal).normalized;
+
+            // ƒвигаемс€ вдоль стены
+            Vector3 targetVelocity = wallDirection * speed;
+            targetVelocity.y = 0;
+
+            velocity = Vector3.Lerp(velocity, targetVelocity, acceleration * Time.fixedDeltaTime);
+
+            remainingJumps = maxJumps;
+        }
+        else { velocity.x = 0f; }
     }
     void Jump()
     {
@@ -79,7 +105,7 @@ public class CharacterMovement : MonoBehaviour
         isJumped = sudinputs;
         if (sudinputs && isGrounded)
         {
-            vertical += Vector3.SmoothDamp(vertical, Vector3.up, ref vertical, Time.deltaTime, force);
+            vertical = Vector3.SmoothDamp(vertical, Vector3.up, ref vertical, Time.deltaTime, force);
         }
         else { vertical = Vector3.Lerp(vertical, Vector2.zero, acceleration * Time.deltaTime); }
     }

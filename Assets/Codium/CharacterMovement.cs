@@ -86,28 +86,22 @@ public class CharacterMovement : MonoBehaviour
         velocity.y = 0;
         if (sudinputs.magnitude > 0.1f)
         {
-            // ѕроецируем направление движени€ на плоскость стены
             Vector3 wallDirection = Vector3.ProjectOnPlane(sudinputs, wallNormal).normalized;
-
-            // ƒвигаемс€ вдоль стены
             Vector3 targetVelocity = wallDirection * speed;
             targetVelocity.y = 0;
-
             velocity = Vector3.Lerp(velocity, targetVelocity, acceleration * Time.fixedDeltaTime);
-
             remainingJumps = maxJumps;
         }
         else { velocity.x = 0f; }
     }
     void Jump()
     {
-        bool sudinputs = action_jump.triggered;
-        isJumped = sudinputs;
-        if (sudinputs && isGrounded)
+        bool sudJumptInput = action_jump.triggered && remainingJumps != 0;
+        isJumped = sudJumptInput;
+        if (isJumped)
         {
-            vertical = Vector3.SmoothDamp(vertical, Vector3.up, ref vertical, Time.deltaTime, force);
+            vertical += Vector3.SmoothDamp(vertical, Vector3.up, ref vertical, Time.deltaTime, force);
         }
-        else { vertical = Vector3.Lerp(vertical, Vector2.zero, acceleration * Time.deltaTime); }
     }
     public void Update() // Absolute Garbage
     { 

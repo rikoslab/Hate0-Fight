@@ -22,7 +22,8 @@ public class CharacterMovement : MonoBehaviour
     public float airacceleraion = 2f;
     public float airdecceleration = 3f;
 
-    public float range = 0.5f;
+    public float xRange = 0.5f;
+    public float yRange = 0.8f;
     public int maxJumps = 2;
     private int remainingJumps;
 
@@ -32,6 +33,7 @@ public class CharacterMovement : MonoBehaviour
     [SerializeField] private bool isJumped;
     [SerializeField] private bool isGrounded;
     [SerializeField] private bool isOnWall;
+    [SerializeField] private bool isTouchedCeiling;
     // idfk what is this all shit needs to do lol
     [Header ("Vectors")]
     [SerializeField] private Vector3 direction; // suddenly its a 2d game
@@ -53,6 +55,7 @@ public class CharacterMovement : MonoBehaviour
         if (controller.isGrounded)
         {
             vertical.y = -2f;
+            isJumped = false;
             remainingJumps = maxJumps;
         } else { vertical.y += gravity * Time.deltaTime; }
     }
@@ -67,19 +70,31 @@ public class CharacterMovement : MonoBehaviour
         float currentDecceleration = isJumped ? airdecceleration : airacceleraion; 
         if (direction != Vector3.zero)
         {
-            velocity = Vector3.SmoothDamp(velocity, direction, ref direction, currentAcceleration * Time.deltaTime, speed);
+            velocity = Vector3.SmoothDamp(velocity, direction, ref velocity, currentAcceleration * Time.deltaTime, speed);
         }
         else { velocity = Vector3.Lerp(velocity, Vector3.zero, currentDecceleration * Time.deltaTime); }
+    }
+    void CheckCeiling()
+    {
+        RaycastHit hit;
+        if (Physics.Raycast(transform.position, Vector3.up, out hit, yRange, mask))
+        {
+            isTouchedCeiling = true;
+            vertical -= vertical;
+        }
+        else { isTouchedCeiling = false; }
+        Debug.DrawLine(transform.position, Vector3.up * yRange + transform.position, isOnWall ? Color.red : Color.blue);
     }
     void CheckWalls()
     {
         RaycastHit hit;
-        if (Physics.Raycast(transform.position, velocity.normalized , out hit, range, mask))
+        if (Physics.Raycast(transform.position, velocity.normalized, out hit, xRange, mask))
         {
             isOnWall = true;
+            velocity.x = 0f;
         }
         else { isOnWall = false; }
-        Debug.DrawLine(transform.position, velocity.normalized , isOnWall ? Color.red : Color.blue );
+        Debug.DrawLine(transform.position, velocity.normalized * xRange + transform.position, isOnWall ? Color.red : Color.blue);
     }
     void WallHandler()
     {
@@ -88,27 +103,27 @@ public class CharacterMovement : MonoBehaviour
         {
             Vector3 wallDirection = Vector3.ProjectOnPlane(sudinputs, wallNormal).normalized;
             Vector3 targetVelocity = wallDirection * speed;
-            targetVelocity.y = 0;
             velocity = Vector3.Lerp(velocity, targetVelocity, acceleration * Time.fixedDeltaTime);
-            remainingJumps = maxJumps;
+            remainingJumps = maxJumps - 1;
         }
         else { velocity.x = 0f; }
     }
     void Jump()
     {
-        bool sudJumptInput = action_jump.triggered && remainingJumps != 0;
-        isJumped = sudJumptInput;
-        if (isJumped)
-        {
-            vertical += Vector3.SmoothDamp(vertical, Vector3.up, ref vertical, Time.deltaTime, force);
-        }
+        isJumped = true;
+        remainingJumps -= 1;
+        vertical = Vector3.Lerp(vertical, Vector3.up, force * Time.deltaTime);
     }
     public void Update() // Absolute Garbage
     { 
         Gravity();
-        Jump();
         CheckDirection();
         CheckWalls();
+
+        if (action_jump.triggered && remainingJumps != 0)
+        {
+            CheckCeiling(); Jump();
+        }
         if (!isOnWall) { Move(); } else { WallHandler(); }
         controller.Move(velocity + vertical);
     }                                                                                                                                                                                      

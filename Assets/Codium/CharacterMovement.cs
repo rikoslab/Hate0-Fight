@@ -1,3 +1,4 @@
+using System;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Assertions.Must;
@@ -15,7 +16,6 @@ public class CharacterMovement : MonoBehaviour
     public float force = 20f;
     public float speed = 4f;
     public float gravity = -6.66f;
-    public float fallSpeed = -2f;
 
     public float acceleration = 3f;
     public float decceleration = 9f;
@@ -26,6 +26,7 @@ public class CharacterMovement : MonoBehaviour
     public float xRange = 0.5f;
     public float yRange = 0.8f;
     public int maxJumps = 2;
+    private int jumps;
     private int remainingJumps;
 
     [Header ("BoOoleans")]
@@ -34,6 +35,7 @@ public class CharacterMovement : MonoBehaviour
     [SerializeField] private bool isJumped;
     [SerializeField] private bool isGrounded;
     [SerializeField] private bool isOnWall;
+    [SerializeField] private bool isDoubleJump;
     [SerializeField] private bool isTouchedCeiling;
     // idfk what is this all shit needs to do lol
     [Header ("Vectors")]
@@ -55,10 +57,11 @@ public class CharacterMovement : MonoBehaviour
         isGrounded = controller.isGrounded;
         if (controller.isGrounded)
         {
-            vertical.y = -2f;
+            vertical.y = -0.5f;
             isJumped = false;
+            isDoubleJump = false;
             remainingJumps = maxJumps;
-        } else { vertical.y += gravity * Time.deltaTime; vertical.y = Mathf.Max(vertical.y, fallSpeed); }
+        } else { vertical.y += gravity * Time.deltaTime; }
     }
     void CheckDirection() 
     {
@@ -67,13 +70,15 @@ public class CharacterMovement : MonoBehaviour
     }
     void Move()
     {
-        float currentAcceleration = isJumped ? airacceleraion : acceleration;
-        float currentDecceleration = isJumped ? airdecceleration : airacceleraion; 
+        float currentAcceleration = isDoubleJump ? airacceleraion : acceleration;
+        float currentDecceleration = isDoubleJump ? airdecceleration : airacceleraion; 
+
+
         if (direction != Vector3.zero)
         {
-            velocity = Vector3.SmoothDamp(velocity, direction, ref velocity, currentAcceleration * Time.deltaTime, speed);
+            velocity.x = Mathf.SmoothDamp(velocity.x, direction.x, ref velocity.x, currentAcceleration * Time.deltaTime, speed);
         }
-        else { velocity = Vector3.Lerp(velocity, Vector3.zero, currentDecceleration * Time.deltaTime); }
+        else { velocity.x = Mathf.Lerp(velocity.x, 0f, currentDecceleration * Time.deltaTime); }
     }
     void CheckCeiling()
     {
@@ -81,7 +86,6 @@ public class CharacterMovement : MonoBehaviour
         if (Physics.Raycast(transform.position, Vector3.up, out hit, yRange, mask))
         {
             isTouchedCeiling = true;
-            vertical -= vertical;
         }
         else { isTouchedCeiling = false; }
         Debug.DrawLine(transform.position, Vector3.up * yRange + transform.position, isOnWall ? Color.red : Color.blue);
@@ -104,7 +108,6 @@ public class CharacterMovement : MonoBehaviour
         {
             Vector3 wallDirection = Vector3.ProjectOnPlane(sudinputs, wallNormal).normalized;
             Vector3 targetVelocity = wallDirection * speed;
-            velocity = Vector3.Lerp(velocity, targetVelocity, acceleration * Time.fixedDeltaTime);
             remainingJumps = maxJumps - 1;
         }
         else { velocity.x = 0f; }
@@ -113,7 +116,12 @@ public class CharacterMovement : MonoBehaviour
     {
         isJumped = true;
         remainingJumps -= 1;
+        jumps += 1;
         vertical = Vector3.up * force * Time.deltaTime;
+        if (jumps > 1)
+        {
+            isDoubleJump = true;
+        }
     }
     public void Update() // Absolute Garbage
     { 

@@ -60,6 +60,7 @@ public class CharacterMovement : MonoBehaviour
             vertical.y = -0.5f;
             isJumped = false;
             isDoubleJump = false;
+            jumps = 0;
             remainingJumps = maxJumps;
         } else { vertical.y += gravity * Time.deltaTime; }
     }
@@ -76,7 +77,7 @@ public class CharacterMovement : MonoBehaviour
 
         if (direction != Vector3.zero)
         {
-            velocity.x = Mathf.SmoothDamp(velocity.x, direction.x, ref velocity.x, currentAcceleration * Time.deltaTime, speed);
+            velocity.x = Mathf.Lerp(velocity.x, direction.normalized.x * speed, currentAcceleration * Time.deltaTime);
         }
         else { velocity.x = Mathf.Lerp(velocity.x, 0f, currentDecceleration * Time.deltaTime); }
     }
@@ -117,7 +118,7 @@ public class CharacterMovement : MonoBehaviour
         isJumped = true;
         remainingJumps -= 1;
         jumps += 1;
-        vertical = Vector3.up * force * Time.deltaTime;
+        vertical.y = Mathf.Lerp(vertical.y, Vector3.up.y * force, Time.deltaTime);
         if (jumps > 1)
         {
             isDoubleJump = true;
@@ -128,10 +129,11 @@ public class CharacterMovement : MonoBehaviour
         Gravity();
         CheckDirection();
         CheckWalls();
+        CheckCeiling();
 
         if (action_jump.triggered && remainingJumps != 0)
         {
-            CheckCeiling(); Jump();
+             Jump();
         }
         if (!isOnWall) { Move(); } else { WallHandler(); }
         controller.Move(velocity + vertical);

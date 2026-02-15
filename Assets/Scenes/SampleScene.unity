@@ -1239,6 +1239,7 @@ MonoBehaviour:
   force: 58
   speed: 4
   gravity: -2.6
+  fallSpeed: -2
   acceleration: 3
   decceleration: 1
   airacceleraion: 5

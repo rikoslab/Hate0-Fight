@@ -15,6 +15,7 @@ public class CharacterMovement : MonoBehaviour
     public float force = 20f;
     public float speed = 4f;
     public float gravity = -6.66f;
+    public float fallSpeed = -2f;
 
     public float acceleration = 3f;
     public float decceleration = 9f;
@@ -57,7 +58,7 @@ public class CharacterMovement : MonoBehaviour
             vertical.y = -2f;
             isJumped = false;
             remainingJumps = maxJumps;
-        } else { vertical.y += gravity * Time.deltaTime; }
+        } else { vertical.y += gravity * Time.deltaTime; vertical.y = Mathf.Max(vertical.y, fallSpeed); }
     }
     void CheckDirection() 
     {
@@ -112,7 +113,7 @@ public class CharacterMovement : MonoBehaviour
     {
         isJumped = true;
         remainingJumps -= 1;
-        vertical = Vector3.Lerp(vertical, Vector3.up, force * Time.deltaTime);
+        vertical = Vector3.up * force * Time.deltaTime;
     }
     public void Update() // Absolute Garbage
     { 
